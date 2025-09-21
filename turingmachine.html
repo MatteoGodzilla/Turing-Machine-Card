@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turing Machine - Scheda di Gioco</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        /* Stili per Informazioni Generali */
+        .general-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .general-info div {
+            display: flex;
+            align-items: center;
+        }
+        .general-info label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .general-info input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* Stili per la Tabella Unificata */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        th {
+            background-color: #eee;
+            font-weight: bold;
+        }
+        
+        /* Stili specifici per le sezioni della tabella */
+        .hypothesis-header {
+            font-size: 24px;
+        }
+        .hypothesis-input {
+            width: 50px;
+            text-align: center;
+        }
+        .hypothesis-header-blue { color: blue; }
+        .hypothesis-header-yellow { color: goldenrod; }
+        .hypothesis-header-purple { color: purple; }
+
+        .controls-header {
+            text-transform: uppercase;
+        }
+        .controls-cell {
+            cursor: pointer;
+            user-select: none;
+            font-size: 24px;
+        }
+        .controls-cell.tick {
+            color: green;
+        }
+        .controls-cell.cross {
+            color: red;
+        }
+
+        /* Stili per la Tabella delle Esclusioni */
+        .exclusion-table td {
+            cursor: pointer;
+            user-select: none;
+            font-weight: bold;
+        }
+        .exclusion-table .excluded {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        /* Stili per la casella di testo */
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        
+        /* Aggiungi questo al blocco di stili */
+button {
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+}
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Turing Machine - Scheda di Gioco</h1>
+
+<div class="section general-info">
+    <div>
+        <label for="player-name">Nome Giocatore:</label>
+        <input type="text" id="player-name">
+    </div>
+    <div>
+        <label for="puzzle-code">Codice Puzzle:#</label>
+        <input type="text" id="puzzle-code">
+    </div>
+    <button id="reset-button">Nuova Partita</button>
+</div>
+
+
+        <div class="section">
+            <h2>Ipotesi e Controlli</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2"></th>
+                        <th colspan="3">Ipotesi</th>
+                        <th colspan="6">Controlli</th>
+                    </tr>
+                    <tr>
+                        <th class="hypothesis-header-blue">&#x25B2;</th>
+                        <th class="hypothesis-header-yellow">&#x25A0;</th>
+                        <th class="hypothesis-header-purple">&#x2B24;</th>
+                        <th>A</th>
+                        <th>B</th>
+                        <th>C</th>
+                        <th>D</th>
+                        <th>E</th>
+                        <th>F</th>
+                    </tr>
+                </thead>
+                <tbody id="combined-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Tabella delle Esclusioni</h2>
+            <table class="exclusion-table">
+                <tbody id="exclusions-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Appunti</h2>
+            <textarea id="notes" placeholder="Scrivi qui i tuoi appunti, gli indizi o le deduzioni..."></textarea>
+        </div>
+
+    </div>
+
+    <script>
+     document.addEventListener('DOMContentLoaded', () => {
+
+    // Selettori per gli elementi HTML
+    const playerNameInput = document.getElementById('player-name');
+    const puzzleCodeInput = document.getElementById('puzzle-code');
+    const combinedBody = document.getElementById('combined-body');
+    const exclusionsBody = document.getElementById('exclusions-body');
+    const notesTextarea = document.getElementById('notes');
+    const resetButton = document.getElementById('reset-button');
+    
+    // Nomi per le chiavi del localStorage
+    const storageKey = 'turingMachineData';
+
+    // Funzione per salvare tutti i dati
+    function saveData() {
+        const data = {
+            playerName: playerNameInput.value,
+            puzzleCode: puzzleCodeInput.value,
+            notes: notesTextarea.value,
+            combined: [],
+            exclusions: []
+        };
+
+        // Salva i dati della Tabella Combinata
+        const combinedRows = combinedBody.querySelectorAll('tr');
+        combinedRows.forEach(row => {
+            const rowData = {
+                hypothesis: [],
+                controls: []
+            };
+            
+            const hypothesisInputs = row.querySelectorAll('input');
+            hypothesisInputs.forEach(input => {
+                rowData.hypothesis.push(input.value);
+            });
+
+            const controlsCells = row.querySelectorAll('.controls-cell');
+            controlsCells.forEach(cell => {
+                rowData.controls.push(cell.dataset.state || '');
+            });
+            data.combined.push(rowData);
+        });
+
+        // Salva i dati della Tabella delle Esclusioni
+        const exclusionCells = exclusionsBody.querySelectorAll('td');
+        exclusionCells.forEach(cell => {
+            data.exclusions.push(cell.classList.contains('excluded'));
+        });
+        
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        console.log("Dati salvati automaticamente.");
+    }
+
+    // Funzione per caricare i dati
+    function loadData() {
+        const storedData = localStorage.getItem(storageKey);
+        if (storedData) {
+            const data = JSON.parse(storedData);
+
+            // Carica le Informazioni Generali e gli Appunti
+            playerNameInput.value = data.playerName || '';
+            puzzleCodeInput.value = data.puzzleCode || '';
+            notesTextarea.value = data.notes || '';
+
+            // Carica i dati della Tabella Combinata
+            const combinedRows = combinedBody.querySelectorAll('tr');
+            if (data.combined) {
+                data.combined.forEach((rowData, rowIndex) => {
+                    const row = combinedRows[rowIndex];
+                    if (row) {
+                        const hypothesisInputs = row.querySelectorAll('input');
+                        rowData.hypothesis.forEach((value, index) => {
+                            if (hypothesisInputs[index]) {
+                                hypothesisInputs[index].value = value;
+                            }
+                        });
+
+                        const controlsCells = row.querySelectorAll('.controls-cell');
+                        rowData.controls.forEach((state, index) => {
+                            if (controlsCells[index]) {
+                                const cell = controlsCells[index];
+                                cell.textContent = '';
+                                cell.className = 'controls-cell';
+                                if (state === 'tick') {
+                                    cell.textContent = '✔';
+                                    cell.classList.add('tick');
+                                    cell.dataset.state = 'tick';
+                                } else if (state === 'cross') {
+                                    cell.textContent = '✖';
+                                    cell.classList.remove('tick');
+                                    cell.classList.add('cross');
+                                    cell.dataset.state = 'cross';
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Carica i dati della Tabella delle Esclusioni
+            const exclusionCells = exclusionsBody.querySelectorAll('td');
+            data.exclusions.forEach((isExcluded, index) => {
+                if (exclusionCells[index]) {
+                    if (isExcluded) {
+                        exclusionCells[index].classList.add('excluded');
+                    } else {
+                        exclusionCells[index].classList.remove('excluded');
+                    }
+                }
+            });
+        }
+    }
+
+    // NUOVA FUNZIONE PER RESETTARE I DATI
+    function resetData() {
+        // Resetta il codice del puzzle e gli appunti
+        puzzleCodeInput.value = '';
+        notesTextarea.value = '';
+
+        // Resetta la Tabella Combinata
+        const hypothesisInputs = combinedBody.querySelectorAll('.hypothesis-input');
+        hypothesisInputs.forEach(input => input.value = '');
+        
+        const controlsCells = combinedBody.querySelectorAll('.controls-cell');
+        controlsCells.forEach(cell => {
+            cell.textContent = '';
+            cell.className = 'controls-cell';
+            cell.dataset.state = '';
+        });
+
+        // Resetta la Tabella delle Esclusioni
+        const exclusionCells = exclusionsBody.querySelectorAll('td');
+        exclusionCells.forEach(cell => cell.classList.remove('excluded'));
+
+        // Salva lo stato vuoto nel localStorage
+        saveData();
+    }
+
+    // Generazione delle tabelle e gestione eventi
+    function setupTables() {
+        // Tabella Unificata (9 righe)
+        for (let i = 0; i < 9; i++) {
+            const row = document.createElement('tr');
+            let rowHtml = `<td>${i + 1}</td>`;
+            
+            // Celle per le Ipotesi
+            for (let j = 0; j < 3; j++) {
+                rowHtml += `<td><input type="number" class="hypothesis-input" min="1" max="5"></td>`;
+            }
+
+            // Celle per i Controlli
+            for (let j = 0; j < 6; j++) {
+                rowHtml += `<td class="controls-cell" data-state=""></td>`;
+            }
+            row.innerHTML = rowHtml;
+            combinedBody.appendChild(row);
+        }
+
+        // Tabella delle Esclusioni (5 righe, 3 colonne)
+        for (let i = 0; i < 5; i++) {
+            const row = document.createElement('tr');
+            const value = 5 - i;
+            row.innerHTML = `
+                <td>${value}</td>
+                <td>${value}</td>
+                <td>${value}</td>
+            `;
+            exclusionsBody.appendChild(row);
+        }
+
+        // Ascoltatori di eventi per salvare i dati
+        const inputsToSave = [
+            playerNameInput, 
+            puzzleCodeInput, 
+            notesTextarea,
+            ...combinedBody.querySelectorAll('input.hypothesis-input')
+        ];
+        inputsToSave.forEach(input => {
+            input.addEventListener('input', saveData);
+        });
+
+        // Gestione click per i controlli
+        combinedBody.addEventListener('click', (event) => {
+            const cell = event.target.closest('td.controls-cell');
+            if (!cell) return;
+
+            let state = cell.dataset.state || '';
+            const rowCells = cell.parentNode.querySelectorAll('.controls-cell');
+            let filledCount = Array.from(rowCells).filter(c => c.dataset.state).length;
+
+            if (state === '') {
+                if (filledCount < 3) {
+                    cell.textContent = '✔';
+                    cell.classList.add('tick');
+                    cell.dataset.state = 'tick';
+                }
+            } else if (state === 'tick') {
+                cell.textContent = '✖';
+                cell.classList.remove('tick');
+                cell.classList.add('cross');
+                cell.dataset.state = 'cross';
+            } else {
+                cell.textContent = '';
+                cell.classList.remove('cross');
+                cell.dataset.state = '';
+            }
+            saveData();
+        });
+
+        // Gestione click per le esclusioni
+        exclusionsBody.addEventListener('click', (event) => {
+            const cell = event.target.closest('td');
+            if (cell && cell.parentNode.id !== 'exclusions-header') {
+                cell.classList.toggle('excluded');
+                saveData();
+            }
+        });
+
+        // Event listener per il nuovo bottone di reset
+        resetButton.addEventListener('click', resetData);
+    }
+    
+    // Esegui la configurazione e il caricamento iniziale
+    setupTables();
+    loadData();
+});
+ 
+    </script>
+
+</body>
+</html>
